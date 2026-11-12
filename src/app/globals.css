@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens. Light by default, dark follows the OS. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --line: #e3e6eb;
+  --text: #14171f;
+  --muted: #5d6676;
+  --accent: #4f46e5;
+  --accent-fg: #ffffff;
+  --accent-soft: #eceafd;
+  --good: #0f8a5f;
+  --good-soft: #e1f5ec;
+  --warn: #a35f00;
+  --warn-soft: #fdf1d9;
+  --bad: #c0392b;
+  --bad-soft: #fbe5e2;
+  --info: #1d6fb8;
+  --info-soft: #e1eefa;
+  /* chart tokens: validated reference palette slots (light) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --chart-grid: #e9ebef;
+  --chart-axis: #5d6676;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1116;
+    --surface: #161a22;
+    --surface-2: #1d222c;
+    --line: #2a3140;
+    --text: #e8ebf1;
+    --muted: #9aa4b5;
+    --accent: #8b85ff;
+    --accent-fg: #0e1116;
+    --accent-soft: #242248;
+    --good: #46c995;
+    --good-soft: #12342a;
+    --warn: #e5a84a;
+    --warn-soft: #3a2b10;
+    --bad: #f0786b;
+    --bad-soft: #3c1b17;
+    --info: #6cb4f0;
+    --info-soft: #14283a;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --chart-grid: #262c38;
+    --chart-axis: #9aa4b5;
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+/* Numbers in tables and tiles should line up. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible keyboard focus everywhere. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

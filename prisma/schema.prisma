@@ -1,0 +1,188 @@
+// Influencer Insights Platform data model.
+// See the implementation plan for the reasoning behind each table.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum InfluencerStatus {
+  NEW
+  SHORTLISTED
+  SELECTED
+  REJECTED
+  ON_HOLD
+}
+
+// Whether the Graph API can read this profile at all.
+enum Eligibility {
+  UNKNOWN          // never checked
+  OK               // Business Discovery works (public Business/Creator account)
+  NOT_PROFESSIONAL // personal account: cannot be read via the Graph API
+  NOT_FOUND        // handle does not exist / typo / renamed
+  ERROR            // transient or unexpected API error, retry
+}
+
+enum MediaType {
+  REEL
+  IMAGE
+  CAROUSEL
+  VIDEO // non-reel feed video
+  STORY
+  OTHER
+}
+
+enum MetricsSource {
+  DISCOVERY // public data via Business Discovery (likes, comments only)
+  INSIGHTS  // owner-authorised data (adds reach, views, saves, shares)
+}
+
+enum AssignmentStatus {
+  PLANNED
+  CONFIRMED
+  VISITED
+  POSTED
+  CANCELLED
+}
+
+enum SyncStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  lastLogin DateTime?
+}
+
+model Influencer {
+  id                String           @id @default(cuid())
+  handle            String           @unique // lowercase, no @
+  name              String?
+  niche             String?
+  locations         String[]         @default([])
+  followersDeclared Int?             // from the Excel files
+  budget            Int?             // rupees, from Costing/BUDGET columns
+  outreachStatus    String?          // e.g. "Sent", "Yes"
+  status            InfluencerStatus @default(NEW)
+  notes             String?
+  sources           String[]         @default([]) // import file names
+
+  // Instagram state
+  igUserId          String?
+  eligibility       Eligibility      @default(UNKNOWN)
+  eligibilityNote   String?
+  followersCount    Int?             // latest from API
+  mediaCount        Int?
+  profilePictureUrl String?
+  lastSyncedAt      DateTime?
+  connectedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  media       Media[]
+  snapshots   ProfileSnapshot[]
+  assignments Assignment[]
+  connection  IgConnection?
+  syncRuns    SyncRun[]
+
+  @@index([status])
+  @@index([eligibility])
+}
+
+model ImportBatch {
+  id        String   @id @default(cuid())
+  filename  String
+  rowsRead  Int
+  created   Int
+  merged    Int
+  skipped   Int
+  createdBy String?
+  createdAt DateTime @default(now())
+}
+
+model Media {
+  id               String        @id // Instagram media id
+  influencerId     String
+  influencer       Influencer    @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  type             MediaType
+  permalink        String?
+  caption          String?
+  timestamp        DateTime
+  likeCount        Int?          // null when the creator hides likes
+  commentsCount    Int?
+  // Only available for connected accounts (INSIGHTS)
+  reach            Int?
+  views            Int?
+  saved            Int?
+  shares           Int?
+  totalInteractions Int?
+  source           MetricsSource @default(DISCOVERY)
+  fetchedAt        DateTime      @default(now())
+
+  @@index([influencerId, timestamp])
+}
+
+model ProfileSnapshot {
+  id             String     @id @default(cuid())
+  influencerId   String
+  influencer     Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  syncedAt       DateTime   @default(now())
+  followersCount Int?
+  mediaCount     Int?
+
+  @@index([influencerId, syncedAt])
+}
+
+model Assignment {
+  id           String           @id @default(cuid())
+  influencerId String
+  influencer   Influencer       @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  concept      String?
+  visitOrHome  String?          // "Visit" | "Home"
+  visitDate    DateTime?
+  postingDate  DateTime?
+  status       AssignmentStatus @default(PLANNED)
+  remarks      String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([influencerId])
+}
+
+model IgConnection {
+  id           String     @id @default(cuid())
+  influencerId String     @unique
+  influencer   Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  inviteToken  String     @unique // tokenised link we send to the influencer
+  igUserId     String?
+  tokenCipher  String?    // AES-256-GCM encrypted long-lived token
+  tokenExpires DateTime?
+  connectedAt  DateTime?
+  createdAt    DateTime   @default(now())
+}
+
+model SyncRun {
+  id           String      @id @default(cuid())
+  influencerId String
+  influencer   Influencer  @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  kind         String      // "eligibility" | "discovery" | "insights"
+  status       SyncStatus  @default(PENDING)
+  error        String?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  createdAt    DateTime    @default(now())
+
+  @@index([status, createdAt])
+}
