@@ -195,6 +195,15 @@ export function createGraphProvider(cfg: GraphConfig): MetricsProvider {
         return req.connection ? await viaOwner(req, req.connection) : await viaDiscovery(req);
       } catch (e) {
         if (e instanceof GraphError) {
+          // business_discovery only exists on an Instagram account node. Seeing this means IG_USER_ID
+          // is something else, almost always the Facebook Page id.
+          if (e.code === 100 && /nonexisting field \(business_discovery\)/i.test(e.message)) {
+            return {
+              ok: false,
+              kind: "ERROR",
+              message: "IG_USER_ID is not an Instagram account id (a Facebook Page id will not work). Use the 17-digit id starting 17841. See SETUP.md, Step D.",
+            };
+          }
           if (e.code === 190) return { ok: false, kind: "ERROR", message: "Instagram access token is invalid or expired. Reconnect in Settings." };
           if ([4, 17, 32, 613, 80002].includes(e.code ?? -1)) return { ok: false, kind: "ERROR", message: "Instagram rate limit reached; will retry later" };
           return { ok: false, kind: "ERROR", message: `Instagram API error: ${e.message}`.slice(0, 300) };

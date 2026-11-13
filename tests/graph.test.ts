@@ -109,6 +109,13 @@ describe("Business Discovery", () => {
     expect(!r.ok && r.message).toMatch(/token/i);
   });
 
+  it("explains the common mistake of using a Facebook Page id as IG_USER_ID", async () => {
+    const f = (async () => json({ error: { message: "(#100) Tried accessing nonexisting field (business_discovery) on node type (Page)", code: 100 } }, 400)) as unknown as typeof fetch;
+    const r = await createGraphProvider(cfg(f)).fetchProfile({ handle: "x", since: SINCE });
+    expect(r).toMatchObject({ ok: false, kind: "ERROR" });
+    expect(!r.ok && r.message).toMatch(/IG_USER_ID is not an Instagram account id/);
+  });
+
   it("treats rate limits as ERROR (retry later), not as a missing account", async () => {
     const f = (async () => json({ error: { message: "Application request limit reached", code: 4 } }, 429)) as unknown as typeof fetch;
     const r = await createGraphProvider(cfg(f)).fetchProfile({ handle: "x", since: SINCE });
